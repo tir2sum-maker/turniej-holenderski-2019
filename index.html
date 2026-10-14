@@ -56,7 +56,7 @@ window.onerror=function(m,u,l){if(document.getElementById('app')&&document.getEl
 const $=s=>document.querySelector(s);
 let S;try{S=JSON.parse(localStorage.getItem('th1'))}catch(e){}
 S=S||{k:4,P:6,R:9,cat:'Rocznik 2019',names:'',teams:null,sc:{},rd:0,tab:'s',q:null};
-['w','d','g'].forEach(function(p,i){if(S[p]==null)S[p]=[3,1,1][i]});if(S.nk==null)S.nk=S.k;if(S.nP==null)S.nP=S.P;if(S.nR==null)S.nR=S.R;
+['w','d','g'].forEach(function(p,i){if(S[p]==null)S[p]=[3,1,1][i]});if(S.nk==null)S.nk=S.k;if(S.nP==null)S.nP=S.P;if(S.nR==null)S.nR=S.R;if(S.gm==null)S.gm=10;if(S.br==null)S.br=2;if(S.t0==null)S.t0='16:30';if(S.end==null)S.end='';
 const save=()=>{try{localStorage.setItem('th1',JSON.stringify(S))}catch(e){}};
 const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const code=(i,k=S.k)=>String.fromCharCode(65+Math.floor(i/k))+(i%k+1);
@@ -103,7 +103,7 @@ const tl=(a,r,m,s)=>a.map(i=>{const at=' data-i="'+i+'" data-m="'+m+'" data-s="'
 function matches(){
  let h='<h1>'+esc(S.cat)+' · '+S.k+'×'+S.k+'</h1><div class="mut">'+S.P+' boisk · '+2*S.P*S.k+' zawodników<br>Zielony + = gol zawodnika (liczy się też jego drużynie), czerwony − cofa gola. „bez strzelca” zmienia sam wynik drużyny (np. gol samobójczy).</div><div class="chips">';
  for(let r=0;r<S.R;r++)h+='<button class="chip'+(r==S.rd?' on':'')+(done(r)?' done':'')+'" data-r="'+r+'">'+(r+1)+(done(r)?' ✓':'')+'</button>';
- h+='</div>';
+ h+='</div>'+timeLine();
  const x=S.teams[S.rd];
  for(let m=0;m<S.P;m++){const c=sc(S.rd,m)||[null,null];
   h+='<div class="card"><h3>Runda '+(S.rd+1)+' · '+pitch(m)+'</h3><div class="sb"><b>'+(c[0]==null?'–':c[0])+' : '+(c[1]==null?'–':c[1])+'</b></div>';
@@ -143,6 +143,24 @@ function players(){
  else for(let g=0;g<2*P;g++){h+='<div class="card"><h3>Grupa '+String.fromCharCode(65+g)+'</h3>';for(let j=0;j<k;j++)h+=row(g*k+j);h+='</div>'}
  return h}
 
+const tmin=s=>{const m=/^(\d\d):(\d\d)/.exec(s||'');return m?+m[1]*60+ +m[2]:null};
+const fm=m=>{m=(m%1440+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
+const hm=m=>(m>=60?Math.floor(m/60)+' h ':'')+(m%60)+' min';
+/* Symulacja czasu: R rund × czas gry + (R−1) × zmiana. Start + całość = koniec; porównanie z godziną „najpóźniej do”. */
+function simHtml(){
+ const R=S.nR,g=S.gm,b=S.br,t0=tmin(S.t0);
+ if(t0==null)return 'Ustaw godzinę startu.';
+ if(!g)return 'Ustaw czas gry.';
+ const total=R*g+(R-1)*b,end=t0+total;
+ let h='Całe wydarzenie: <b>'+hm(total)+'</b><br><span class="mut">'+R+' rund × '+g+' min + '+(R-1)+' × '+b+' min zmiany</span><br>Start <b>'+fm(t0)+'</b> → koniec <b>'+fm(end)+'</b>';
+ let te=tmin(S.end);
+ if(te!=null){if(te<=t0)te+=1440;const d=te-end,room=te-t0;
+  h+='<br><br>'+(d>=0?'✅ Zdążycie – zapas <b>'+hm(d)+'</b> do '+fm(te):'⚠️ Nie zdążycie – brakuje <b>'+hm(-d)+'</b> do '+fm(te))+
+  '<br><span class="mut">Przy '+g+' min gry zmieści się '+Math.max(0,Math.floor((room+b)/(g+b)))+' rund; przy '+R+' rundach maksymalny czas gry to '+Math.max(0,Math.floor((room-(R-1)*b)/R))+' min.</span>'}
+ return h}
+const sim=()=>{const e=$('#sim');if(e)e.innerHTML=simHtml()};
+function timeLine(){const t0=tmin(S.t0);if(t0==null||!S.gm)return '';const s=t0+S.rd*(S.gm+S.br);
+ return '<div class="mut">Runda '+(S.rd+1)+': <b>'+fm(s)+'–'+fm(s+S.gm)+'</b> · koniec turnieju ok. '+fm(t0+S.R*S.gm+(S.R-1)*S.br)+'</div>'}
 const dR=(k,P)=>k==1?Math.min(20,Math.max(3,2*P-1)):k==3?10:9;
 function settings(){
  const q=S.q;
@@ -151,11 +169,13 @@ function settings(){
  '<label>Liczba boisk (2–13)</label><input id="pp" type="number" inputmode="numeric" min="2" max="13" value="'+S.nP+'">'+
  '<label>Liczba rund</label><input id="rr" type="number" inputmode="numeric" min="3" max="20" value="'+S.nR+'">'+
  '<div class="mut" style="margin-top:6px">Potrzeba <b>'+2*S.nP*S.nk+'</b> zawodników (każdy gra w każdej rundzie) – wpisz ich w zakładce Zawodnicy. Format 1 × 1: każdy gra sam z jednym rywalem.</div>'+
+ '<label>Czas turnieju</label><div class="row3"><div><div class="mut">Czas gry (min)</div><input id="tg" type="number" inputmode="numeric" value="'+S.gm+'"></div><div><div class="mut">Zmiana (min)</div><input id="tb" type="number" inputmode="numeric" value="'+S.br+'"></div><div><div class="mut">Start</div><input id="t0" type="time" value="'+esc(S.t0)+'"></div></div>'+
+ '<label>Koniec najpóźniej o (opcjonalnie)</label><input id="tend" type="time" value="'+esc(S.end)+'"><div class="card" id="sim">'+simHtml()+'</div>'+
  '<label>Punktacja (porażka = 0)</label><div class="row3"><div><div class="mut">Wygrana</div><input class="pts" data-p="w" type="number" inputmode="numeric" value="'+S.w+'"></div><div><div class="mut">Remis</div><input class="pts" data-p="d" type="number" inputmode="numeric" value="'+S.d+'"></div><div><div class="mut">Za bramkę</div><input class="pts" data-p="g" type="number" inputmode="numeric" value="'+S.g+'"></div></div>'+
  '<button class="btn" id="go">Generuj turniej</button>'+
  (q?'<div class="card mut">Aktualny harmonogram: '+S.R+' rund, powtórzeni partnerzy: <b>'+q.pr+'</b>, powtórzeni rywale: <b>'+q.or+'</b>.</div>':'')+
  '<button class="btn s" id="rs">Wyczyść same wyniki</button>'+
- '<p class="mut">Dane zapisują się w przeglądarce telefonu. Zmiana formatu, boisk lub rund wymaga „Generuj” i kasuje wyniki. Zmiana punktacji przelicza ranking od razu.</p><p class="mut">Wersja 2</p>'}
+ '<p class="mut">Dane zapisują się w przeglądarce telefonu. Zmiana formatu, boisk lub rund wymaga „Generuj” i kasuje wyniki. Zmiana punktacji przelicza ranking od razu.</p><p class="mut">Wersja 3</p>'}
 function fit(){document.querySelectorAll('.nm').forEach(el=>{el.style.fontSize='';let f=parseFloat(getComputedStyle(el).fontSize)||15;while(el.scrollWidth>el.clientWidth+1&&f>8){f-=.5;el.style.fontSize=f+'px'}})}
 function render(){
  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==S.tab));
@@ -183,11 +203,15 @@ document.addEventListener('input',e=>{const t=e.target;
  if(t.classList.contains('pi')){const a=S.names.split('\n'),i=+t.dataset.i;while(a.length<=i)a.push('');a[i]=t.value.replace(/\n/g,' ');S.names=a.join('\n');
   const N=2*S.nP*S.nk;$('#cnt').textContent=Array.from({length:N},(_,j)=>(a[j]||'').trim()).filter(Boolean).length}
  else if(t.id=='cat')S.cat=t.value;
- else if(t.id=='pp'){S.nP=Math.min(13,Math.max(2,num(t.value,6)));if(S.nk==1){S.nR=dR(1,S.nP);const r=$('#rr');if(r)r.value=S.nR}}
- else if(t.id=='rr')S.nR=Math.min(20,Math.max(3,num(t.value,9)));
+ else if(t.id=='tg'){S.gm=num(t.value,10);sim()}
+ else if(t.id=='tb'){S.br=num(t.value,2);sim()}
+ else if(t.id=='t0'){S.t0=t.value;sim()}
+ else if(t.id=='tend'){S.end=t.value;sim()}
+ else if(t.id=='pp'){S.nP=Math.min(13,Math.max(2,num(t.value,6)));if(S.nk==1){S.nR=dR(1,S.nP);const r=$('#rr');if(r)r.value=S.nR}sim()}
+ else if(t.id=='rr'){S.nR=Math.min(20,Math.max(3,num(t.value,9)));sim()}
  else if(t.classList.contains('pts'))S[t.dataset.p]=num(t.value,0);
  save()});
-document.addEventListener('change',e=>{if(e.target.id=='fmt'){S.nk=+e.target.value;S.nR=dR(S.nk,S.nP);render()}});
+document.addEventListener('change',e=>{const i=e.target.id;if(i=='fmt'){S.nk=+e.target.value;S.nR=dR(S.nk,S.nP);render()}else if(i=='t0'||i=='tend'){S[i=='t0'?'t0':'end']=e.target.value;sim();save()}});
 document.addEventListener('keydown',e=>{if(e.key=='Enter'&&e.target.classList.contains('pi')){e.preventDefault();
  const l=[...document.querySelectorAll('.pi')],n=l[l.indexOf(e.target)+1];n?n.focus():e.target.blur()}});
 window.addEventListener('resize',fit);
