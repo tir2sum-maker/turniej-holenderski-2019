@@ -56,7 +56,7 @@ window.onerror=function(m,u,l){if(document.getElementById('app')&&document.getEl
 const $=s=>document.querySelector(s);
 let S;try{S=JSON.parse(localStorage.getItem('th1'))}catch(e){}
 S=S||{k:4,P:6,R:9,cat:'Rocznik 2019',names:'',teams:null,sc:{},rd:0,tab:'s',q:null};
-['w','d','g'].forEach(function(p,i){if(S[p]==null)S[p]=[3,1,1][i]});if(S.nk==null)S.nk=S.k;if(S.nP==null)S.nP=S.P;if(S.nR==null)S.nR=S.R;if(S.gm==null)S.gm=10;if(S.br==null)S.br=2;if(S.t0==null)S.t0='16:30';if(S.end==null)S.end='';
+const norm=()=>{['w','d','g'].forEach(function(p,i){if(S[p]==null)S[p]=[3,1,1][i]});if(S.nk==null)S.nk=S.k;if(S.nP==null)S.nP=S.P;if(S.nR==null)S.nR=S.R;if(S.gm==null)S.gm=10;if(S.br==null)S.br=2;if(S.t0==null)S.t0='16:30';if(S.end==null)S.end='';};norm();
 const save=()=>{try{localStorage.setItem('th1',JSON.stringify(S))}catch(e){}};
 const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const code=(i,k=S.k)=>String.fromCharCode(65+Math.floor(i/k))+(i%k+1);
@@ -101,7 +101,7 @@ const gs=(r,i)=>(S.gs&&S.gs[r+'-'+i])||0;
 const tl=(a,r,m,s)=>a.map(i=>{const at=' data-i="'+i+'" data-m="'+m+'" data-s="'+s+'"';
  return '<div class="pl"><div class="nm">'+nm(i)+'</div><span class="gb">'+(gs(r,i)?'⚽'+gs(r,i):'')+'</span><button class="gp" data-g="1"'+at+'>+</button><button class="gm" data-g="-1"'+at+'>−</button></div>'}).join('');
 function matches(){
- let h='<h1>'+esc(S.cat)+' · '+S.k+'×'+S.k+'</h1><div class="mut">'+S.P+' boisk · '+2*S.P*S.k+' zawodników<br>Zielony + = gol zawodnika (liczy się też jego drużynie), czerwony − cofa gola. „bez strzelca” zmienia sam wynik drużyny (np. gol samobójczy).</div><div class="chips">';
+ let h='<h1>'+esc(S.cat)+' · '+S.k+'×'+S.k+'</h1><div class="mut">'+S.P+' boisk · '+2*S.P*S.k+' zawodników<br>Zielony + = gol zawodnika (liczy się też jego drużynie), czerwony − cofa gola. „bez strzelca” zmienia sam wynik drużyny (np. gol samobójczy), nie zejdzie poniżej sumy goli strzelców.</div><div class="chips">';
  for(let r=0;r<S.R;r++)h+='<button class="chip'+(r==S.rd?' on':'')+(done(r)?' done':'')+'" data-r="'+r+'">'+(r+1)+(done(r)?' ✓':'')+'</button>';
  h+='</div>'+timeLine();
  const x=S.teams[S.rd];
@@ -161,11 +161,11 @@ function simHtml(){
 const sim=()=>{const e=$('#sim');if(e)e.innerHTML=simHtml()};
 function timeLine(){const t0=tmin(S.t0);if(t0==null||!S.gm)return '';const s=t0+S.rd*(S.gm+S.br);
  return '<div class="mut">Runda '+(S.rd+1)+': <b>'+fm(s)+'–'+fm(s+S.gm)+'</b> · koniec turnieju ok. '+fm(t0+S.R*S.gm+(S.R-1)*S.br)+'</div>'}
-const dR=(k,P)=>k==1?Math.min(20,Math.max(3,2*P-1)):k==3?10:9;
+const dR=(k,P)=>k==1?Math.min(20,Math.max(3,2*P-1)):k==3?10:k==5?7:9;
 function settings(){
  const q=S.q;
  return '<h1>Ustawienia</h1><label>Kategoria</label><input id="cat" value="'+esc(S.cat)+'">'+
- '<label>Format (zawodników w drużynie)</label><select id="fmt">'+[1,2,3,4].map(k=>'<option value="'+k+'"'+(S.nk==k?' selected':'')+'>'+k+' × '+k+'</option>').join('')+'</select>'+
+ '<label>Format (zawodników w drużynie)</label><select id="fmt">'+[1,2,3,4,5].map(k=>'<option value="'+k+'"'+(S.nk==k?' selected':'')+'>'+k+' × '+k+'</option>').join('')+'</select>'+
  '<label>Liczba boisk (2–13)</label><input id="pp" type="number" inputmode="numeric" min="2" max="13" value="'+S.nP+'">'+
  '<label>Liczba rund</label><input id="rr" type="number" inputmode="numeric" min="3" max="20" value="'+S.nR+'">'+
  '<div class="mut" style="margin-top:6px">Potrzeba <b>'+2*S.nP*S.nk+'</b> zawodników (każdy gra w każdej rundzie) – wpisz ich w zakładce Zawodnicy. Format 1 × 1: każdy gra sam z jednym rywalem.</div>'+
@@ -175,7 +175,8 @@ function settings(){
  '<button class="btn" id="go">Generuj turniej</button>'+
  (q?'<div class="card mut">Aktualny harmonogram: '+S.R+' rund, powtórzeni partnerzy: <b>'+q.pr+'</b>, powtórzeni rywale: <b>'+q.or+'</b>.</div>':'')+
  '<button class="btn s" id="rs">Wyczyść same wyniki</button>'+
- '<p class="mut">Dane zapisują się w przeglądarce telefonu. Zmiana formatu, boisk lub rund wymaga „Generuj” i kasuje wyniki. Zmiana punktacji przelicza ranking od razu.</p><p class="mut">Wersja 3</p>'}
+ '<button class="btn s" id="bk">Kopia zapasowa (kopiuj / udostępnij)</button><button class="btn s" id="rb">'+(S.rest?'Zamknij wczytywanie':'Wczytaj kopię zapasową')+'</button>'+(S.rest?'<textarea id="rt" placeholder="Wklej tutaj skopiowaną kopię zapasową"></textarea><button class="btn" id="ra">Wczytaj</button>':'')+
+ '<p class="mut">Dane zapisują się w przeglądarce telefonu. Zmiana formatu, boisk lub rund wymaga „Generuj” i kasuje wyniki. Zmiana punktacji przelicza ranking od razu.</p><p class="mut">Wersja 4</p>'}
 function fit(){document.querySelectorAll('.nm').forEach(el=>{el.style.fontSize='';let f=parseFloat(getComputedStyle(el).fontSize)||15;while(el.scrollWidth>el.clientWidth+1&&f>8){f-=.5;el.style.fontSize=f+'px'}})}
 function render(){
  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==S.tab));
@@ -187,8 +188,13 @@ document.addEventListener('click',e=>{
  else if(D.r!=null){S.rd=+D.r;render()}
  else if(D.g){const i=+D.i,s=+D.s,d=+D.g,key=S.rd+'-'+D.m,c=S.sc[key]=S.sc[key]||[null,null],kk=S.rd+'-'+i;S.gs=S.gs||{};const cur=S.gs[kk]||0;if(d<0&&!cur)return;
   S.gs[kk]=cur+d;if(c[s]==null)c[s]=0;if(c[1-s]==null)c[1-s]=0;c[s]=Math.max(0,c[s]+d);render()}
- else if(D.m!=null){const key=S.rd+'-'+D.m,c=S.sc[key]=S.sc[key]||[null,null],s=+D.s,d=+D.d;c[s]=c[s]==null?0:Math.max(0,c[s]+d);render()}
+ else if(D.m!=null){const key=S.rd+'-'+D.m,c=S.sc[key]=S.sc[key]||[null,null],s=+D.s,d=+D.d;const lo=S.teams[S.rd][2*D.m+s].reduce((a,i)=>a+gs(S.rd,i),0);c[s]=c[s]==null?lo:Math.max(lo,c[s]+d);render()}
  else if(b.id=='rs'){if(confirm('Skasować wszystkie wyniki?')){S.sc={};S.gs={};render()}}
+ else if(b.id=='bk'){const t=JSON.stringify(Object.assign({},S,{paste:false,rest:false}));
+  if(navigator.share)navigator.share({text:t}).catch(()=>{});
+  else navigator.clipboard.writeText(t).then(()=>alert('Skopiowano kopię zapasową')).catch(()=>alert('Nie udało się skopiować'))}
+ else if(b.id=='rb'){S.rest=!S.rest;render()}
+ else if(b.id=='ra'){try{const p=JSON.parse($('#rt').value);if(!p||!p.k||!p.P||!p.R)throw 0;S=p;S.rest=false;norm();S.tab=S.teams?'m':'s';render()}catch(x){alert('To nie wygląda na kopię zapasową.')}}
  else if(b.id=='pb'){S.paste=!S.paste;render()}
  else if(b.id=='pa'){S.names=$('#pt').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n');S.paste=false;render()}
  else if(b.id=='sh'){const t=shareText();
@@ -197,7 +203,7 @@ document.addEventListener('click',e=>{
  else if(b.id=='go'){
   if(S.teams&&Object.keys(S.sc).length&&!confirm('Nowy harmonogram skasuje wprowadzone wyniki. Kontynuować?'))return;
   b.textContent='Generuję…';b.disabled=true;
-  setTimeout(()=>{S.k=S.nk;S.P=S.nP;S.R=S.nR;const g=gen(S.P,S.k,S.R,90000*S.P,7);S.teams=g.teams;S.q=g.q;S.sc={};S.gs={};S.rd=0;S.tab='m';render()},50)}
+  setTimeout(()=>{S.k=S.nk;S.P=S.nP;S.R=S.nR;const g=gen(S.P,S.k,S.R,90000*S.P*(S.k>=5?2:1),7);S.teams=g.teams;S.q=g.q;S.sc={};S.gs={};S.rd=0;S.tab='m';render()},50)}
 });
 document.addEventListener('input',e=>{const t=e.target;
  if(t.classList.contains('pi')){const a=S.names.split('\n'),i=+t.dataset.i;while(a.length<=i)a.push('');a[i]=t.value.replace(/\n/g,' ');S.names=a.join('\n');
